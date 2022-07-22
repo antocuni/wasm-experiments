@@ -1,17 +1,27 @@
 # NOTE: the following links do not mention --no-entry, but I had to add it to
 # emcc options to allow the code to compile
 #
-# https://v8.dev/blog/emscripten-standalone-wasm
-# https://github.com/emscripten-core/emscripten/wiki/WebAssembly-Standalone
+# for compiling C and manually run WASM from JS:
+#   https://v8.dev/blog/emscripten-standalone-wasm
+#   https://github.com/emscripten-core/emscripten/wiki/WebAssembly-Standalone
 
-# wasm2wat and wasm-decompile are available from here:
-# https://github.com/WebAssembly/wabt
-# https://github.com/WebAssembly/wabt/releases/tag/1.0.29
+# for wasm2wat, wasm-decompile, etc.:
+#   https://github.com/WebAssembly/wabt
+#   https://github.com/WebAssembly/wabt/releases/tag/1.0.29
+
+# for python
+#   pip install wasmtime
+#   https://github.com/bytecodealliance/wasmtime-py
+#   https://bytecodealliance.github.io/wasmtime-py/
 
 
 .PHONY: run
 run: build/mylib.wasm
-	node run.js
+	@node run.js
+
+.PHONY: run
+run-python: build/mylib.wasm
+	@python3 run.py
 
 .PHONY: wasm2wat
 wasm2wat: build/mylib.wasm
