@@ -4,6 +4,7 @@
 # for compiling C and manually run WASM from JS:
 #   https://v8.dev/blog/emscripten-standalone-wasm
 #   https://github.com/emscripten-core/emscripten/wiki/WebAssembly-Standalone
+#   https://dassur.ma/things/c-to-webassembly/
 
 # for wasm2wat, wasm-decompile, etc.:
 #   https://github.com/WebAssembly/wabt
@@ -15,17 +16,25 @@
 #   https://bytecodealliance.github.io/wasmtime-py/
 
 
+# useful CFLAGS to experiment with:
+#   -O3: makes it easier to read the disassembled output in e.g. wasm2wat
+#
+#   -Wl,--export-all: exports all symbols, needed to access e.g. __heap_base,
+#                     __data_end, etc. as described in the c-to-webassembly
+#                     blogpost above
+#CFLAGS=-O3 -Wl,--export-all
+
 .PHONY: run
 run: build/mylib.wasm
 	@node run.js
 
-.PHONY: run
+.PHONY: run-python
 run-python: build/mylib.wasm
 	@python3 run.py
 
 .PHONY: wasm2wat
 wasm2wat: build/mylib.wasm
-	wasm2wat build/mylib.wasm
+	wasm2wat build/mylib.wasm | pygmentize -l wast -P style=rrt
 
 .PHONY: wasm-decompile
 wasm-decompile: build/mylib.wasm
@@ -42,4 +51,4 @@ build:
 	mkdir build
 
 build/mylib.wasm: build mylib.c
-	emcc mylib.c -o build/mylib.wasm --no-entry
+	emcc mylib.c -o build/mylib.wasm --no-entry $(CFLAGS)
