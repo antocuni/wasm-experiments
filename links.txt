@@ -1,0 +1,27 @@
+* https://github.com/bytecodealliance/wit-bindgen/
+  bindings generator based on the interface types (or component model?) extension,
+  for C and Rust (and JS?)
+
+* https://lucumr.pocoo.org/2020/11/30/how-to-wasm-dwarf/
+  WASM, DWARF, debugging
+
+* https://radu-matei.com/blog/intro-wasm-components/
+  Component Model example
+
+* wasmlink: static linker for component model
+
+* https://github.com/WebAssembly/tool-conventions/blob/main/BasicCABI.md
+  C ABI used by clang
+
+* https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md
+  static linking
+
+* https://kripken.github.io/blog/wasm/2019/07/16/asyncify.html
+  blog post explaining asyncify
+
+* https://schellcode.github.io/webassembly-without-emscripten
+  WebAssembly without emscripten
+
+
+* https://github.com/emscripten-core/emscripten/blob/main/src/settings.js
+  emscripten settings such as -sMODULARIZE -sMAIN_MODULE, etc.
