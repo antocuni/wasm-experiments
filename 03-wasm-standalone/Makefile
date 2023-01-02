@@ -34,7 +34,7 @@ run-python: build/mylib.wasm
 
 .PHONY: wasm2wat
 wasm2wat: build/mylib.wasm
-	wasm2wat build/mylib.wasm | pygmentize -l wast -P style=rrt
+	wasm2wat --generate-names build/mylib.wasm | pygmentize -l wast -P style=rrt
 
 .PHONY: wasm-decompile
 wasm-decompile: build/mylib.wasm
