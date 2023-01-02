@@ -13,7 +13,7 @@ build/mylib.wasm: build mylib.c
 	@clang \
 		--target=wasm32 \
 		-nostdlib \
-		-Wl,--export-all -Wl,--no-entry \
+		-Wl,--export-all -Wl,--no-entry, -Wl,--allow-undefined \
 		-g \
 		-O3 \
 		-o build/mylib.wasm \
@@ -24,4 +24,4 @@ build:
 
 .PHONY: wasm2wat
 wasm2wat: build/mylib.wasm
-	wasm2wat --generate-names build/mylib.wasm | pygmentize -l wast -P style=rrt
+	wasm2wat --generate-names -f build/mylib.wasm | pygmentize -l wast -P style=rrt

@@ -1,7 +1,9 @@
-int myadd(int a, int b) {
-    return a+b;
-}
+void foo(void);
 
-int foo(int a, int b) {
-    return myadd(a*2, b*3);
+int myadd(int a, int b) {
+    if (a>0) {
+        foo();
+        return 42;
+    }
+    return (a+1) * (b+2);
 }
