@@ -1,3 +1,5 @@
+* https://github.com/vshymanskyy/awesome-wasm-tools
+
 * https://github.com/bytecodealliance/wit-bindgen/
   bindings generator based on the interface types (or component model?) extension,
   for C and Rust (and JS?)
@@ -25,3 +27,32 @@
 
 * https://github.com/emscripten-core/emscripten/blob/main/src/settings.js
   emscripten settings such as -sMODULARIZE -sMAIN_MODULE, etc.
+
+* https://github.com/bytecodealliance/wizer
+  pre-initialize a WASM binary (precompute and save static data, could be
+  useful to preinitialize the python startup)
+
+
+* https://jott.live/markdown/wasm_binary_size
+  https://github.com/bwasti/web_assembly_experiments/tree/main/lazy_load
+  Split WASM binary into smaller pieces
+
+
+* https://jott.live/markdown/js_gc_in_wasm
+  JavaScript Garbage Collection with WebAssembly is Possible Today
+
+
+
+pyodide startup/size: https://github.com/pyodide/pyodide/issues/646
+
+
+* https://aransentin.github.io/cwasm/
+  Notes on working with C and WebAssembly
+
+
+cowasm dynamic linker, lots of interesting links inside
+    https://www.npmjs.com/package/dylink
+
+
+WASI playground
+    https://runno.dev/articles/ffmpeg
