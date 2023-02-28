@@ -56,3 +56,14 @@ cowasm dynamic linker, lots of interesting links inside
 
 WASI playground
     https://runno.dev/articles/ffmpeg
+
+component model:
+    https://www.fermyon.com/blog/webassembly-component-model
+
+
+* https://surma.dev/things/rust-to-webassembly/
+  Rust to WebAssembly, with lots of low-level details and how to use various
+  tools (llvm-objdump, wasm-objdump, twiggy, etc)
+
+* https://rustwasm.github.io/twiggy/
+  A code size profiler for Wasm
