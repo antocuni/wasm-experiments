@@ -1,9 +1,13 @@
-void foo(void);
+void some_external_function(int* p);
 
-int myadd(int a, int b) {
-    if (a>0) {
-        foo();
-        return 42;
-    }
-    return (a+1) * (b+2);
+int foo(int a, int b) {
+    if (a > 0)
+        some_external_function((int*)a);
+    else
+        some_external_function((int*)b);
+
+    some_external_function((int*)0);
+    /* int c = a+b; */
+    /* some_external_function(&c); */
+    /* return c; */
 }

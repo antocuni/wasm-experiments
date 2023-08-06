@@ -1,0 +1,18 @@
+<html>
+  <head>
+    <script type="module">
+      const imports = {};
+      const mod = await WebAssembly.instantiateStreaming(
+          fetch("build/fibo.wasm"),
+          imports);
+
+      const { fibo } = mod.instance.exports;
+      for(let i=0; i<10; i++)
+          console.log(fibo(i));
+    </script>
+  </head>
+
+  <body>
+    See JS console...
+  </body>
+</html>

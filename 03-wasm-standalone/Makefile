@@ -51,4 +51,4 @@ build:
 	mkdir build
 
 build/mylib.wasm: build mylib.c
-	emcc mylib.c -o build/mylib.wasm --no-entry $(CFLAGS)
+	emcc -O3 mylib.c -o build/mylib.wasm --no-entry $(CFLAGS)

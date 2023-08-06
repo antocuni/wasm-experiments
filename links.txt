@@ -67,3 +67,40 @@ component model:
 
 * https://rustwasm.github.io/twiggy/
   A code size profiler for Wasm
+
+* https://bytecodealliance.org/articles/making-javascript-run-fast-on-webassembly
+  SpiderMonkey compiler to WASM, using Wizer and some sort of "parametric" Inline Caches
+
+
+For DWARF symbols
+  - https://developer.chrome.com/blog/wasm-debugging-2020/
+  - https://goo.gle/wasm-debugging-extension
+  - emcc -g3 -c foo.c
+  - llvm-dwarfdump-10 foo.o
+
+
+How to use clang to emit WASM code:
+  - https://www.davidpriver.com/c-in-wasm.html
+
+Emscripten/LLVM compiled to WASM and running in the browser:
+  - https://github.com/jprendes/emception
+  - https://tbfleming.github.io/   (5 years old)
+
+Em-shell: busybox running in the browser
+
+strace-like instrumentation and profiling:
+  - https://github.com/loopholelabs/wasm-toolkit
+
+
+WASM clang intrinsics for memory grow/fill/memcpy/etc
+  - https://stackoverflow.com/questions/67068195/does-clang-provide-intrinsics-for-webassemblys-memory-fill-and-memory-copy
+
+
+WASM tree-shaking:
+  - https://github.com/alexcrichton/wasm-gc
+  - https://github.com/rustwasm/wasm-snip
+
+
+Success stories:
+  - Google Earth: https://medium.com/google-earth/google-earth-comes-to-more-browsers-thanks-to-webassembly-1877d95810d6
+  - Photoshop: https://web.dev/ps-on-the-web/
