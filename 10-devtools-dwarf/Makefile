@@ -33,6 +33,7 @@ build/fibo.o: fibo.c
         -Og \
         -g \
         -gsplit-dwarf \
+        -gdwarf-5 \
         -c ../fibo.c
 
 
