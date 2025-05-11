@@ -10,8 +10,11 @@ run-node: hello.wasm run.mjs node_modules
 run-python: hello.wasm
 	python run.py
 
-hello.wasm: hello.c
-	zig cc --target=wasm32-wasi-musl $(CFLAGS) hello.c -o hello.wasm
+hello.o: hello.c
+	zig cc --target=wasm32-wasi-musl $(CFLAGS) -c hello.c
+
+hello.wasm: hello.o
+	zig cc --target=wasm32-wasi-musl hello.o -o hello.wasm
 
 node_modules:
 	npm i
