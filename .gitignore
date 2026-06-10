@@ -130,3 +130,14 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Build artifacts
+*.o
+
+# Emacs backup/temp files
+*~
+\#*\#
+.\#*
+
+# Nested git repos (third-party clones)
+zz-tiny-printf/
