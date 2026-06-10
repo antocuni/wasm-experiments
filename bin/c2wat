@@ -1,0 +1,63 @@
+#!/usr/bin/python
+# -*- mode: python -*-
+
+import sys
+import os
+from pathlib import Path
+import subprocess
+
+D = Path('/tmp/c2wat')
+
+CLANG = '/home/antocuni/anaconda/emsdk/upstream/bin/clang-18'
+
+# for multivalue support:
+# -mmultivalue -Xclang -target-abi -Xclang experimental-mv
+# https://www.reddit.com/r/WebAssembly/comments/hm7am3/c_return_multivalues/
+
+def main():
+    D.mkdir(exist_ok=True)
+    file_c = Path(sys.argv[1])
+    basename = file_c.stem
+    file_wasm = D.joinpath(f'{basename}.wasm')
+    file_wat = D.joinpath(f'{basename}.wat')
+    extra_args = sys.argv[2:]
+    print(f'{file_c} --> {file_wasm}')
+    cmd = [
+        CLANG,
+	'--target=wasm32',
+        '-nostdlib',
+	'-Wl,--export-all',
+        '-Wl,--no-entry,',
+        '-Wl,--allow-undefined',
+	'-g',
+	'-O3',
+	'-o', str(file_wasm),
+    ]
+    cmd += extra_args
+    cmd += [file_c]
+    subprocess.check_call(cmd)
+    #
+
+    print(f'{file_wasm} --> {file_wat}')
+    cmd = [
+        'wasm2wat',
+        '--generate-names',
+        '-o', str(file_wat),
+        str(file_wasm),
+    ]
+    subprocess.check_call(cmd)
+    #
+    cmd = [
+        'pygmentize',
+        '-l', 'wast',
+        '-P', 'style=rrt',
+        str(file_wat)
+    ]
+    subprocess.check_call(cmd)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except subprocess.CalledProcessError:
+        pass
