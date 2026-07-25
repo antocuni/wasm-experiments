@@ -7,9 +7,9 @@ BDWGC_DIR := bdwgc
 BDWGC_INC := -I$(BDWGC_DIR)/include
 BDWGC_DEFS := -DGC_BUILTIN_ATOMIC -DNO_EXECUTE_PERMISSION
 
-.PHONY: all run run-gc clean
+.PHONY: all run run-gc run-lost clean
 
-all: leak.wasm leak_gc.wasm
+all: leak.wasm leak_gc.wasm lost_pointer.wasm
 
 leak.wasm: leak.c
 	$(CC) $(CFLAGS) $< -o $@
@@ -26,5 +26,11 @@ run: leak.wasm
 run-gc: leak_gc.wasm
 	$(WASMTIME) leak_gc.wasm
 
+lost_pointer.wasm: lost_pointer.c libgc.o
+	$(CC) $(CFLAGS) $(BDWGC_INC) lost_pointer.c libgc.o -o $@
+
+run-lost: lost_pointer.wasm
+	$(WASMTIME) lost_pointer.wasm
+
 clean:
-	rm -f leak.wasm leak_gc.wasm libgc.o
+	rm -f leak.wasm leak_gc.wasm lost_pointer.wasm libgc.o
