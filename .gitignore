@@ -141,3 +141,4 @@ dmypy.json
 
 # Nested git repos (third-party clones)
 zz-tiny-printf/
+14-bdwgc/bdwgc/
