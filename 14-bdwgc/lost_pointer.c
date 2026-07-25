@@ -1,69 +1,78 @@
 /*
  * Demonstrate that bdwgc on wasi cannot see GC-managed pointers that
- * clang keeps in wasm locals (never spilled to the shadow stack).
+ * clang keeps in wasm locals (never spilled to the shadow stack), and
+ * show that GC_KEEP fixes the problem for a specific variable.
  *
- * `p` is passed as a function parameter to check_after_gc(), so it
- * lives in a wasm local. Wasm locals persist across calls for free
- * (no caller-saves ABI), so clang has no reason to spill p onto the
- * shadow stack around the GC_gcollect() call. bdwgc scans the data
- * segment and the shadow stack — neither contains p — so the block
- * is treated as unreachable, reclaimed, and reused.
- *
- * All reads through p happen inside check_after_gc(), an opaque
- * (noinline) function, so clang can't constant-fold the reads back
- * into the source-level bytes we wrote with strcpy.
+ * We allocate two buffers:
+ *   - kept: spilled to the shadow stack via GC_KEEP => bdwgc finds it
+ *   - lost: only in a wasm local              => bdwgc misses it
+ * After GC + heap reuse we check the contents of both.
  */
 #include <stdio.h>
 #include <string.h>
 #include <gc.h>
 
+/*
+ * Force clang to spill a local to the shadow stack by taking its address
+ * in an empty inline-asm block. One i32.store at the site; subsequent
+ * uses of the local still come from the wasm local (no reloads).
+ */
+#define GC_KEEP(x) __asm__ volatile("" :: "r"(&(x)))
+
 #define CHUNK 1024
-static const char MAGIC[] = "hello-from-the-past";
+static const char MAGIC_KEPT[] = "hello-i-am-kept-alive";
+static const char MAGIC_LOST[] = "hello-i-will-be-lost!";
 
 static void __attribute__((noinline)) burn_through_heap(void) {
-    /* Churn the freelist so the freed block gets reused. */
+    /* Churn the freelist so freed blocks get reused. */
     for (int i = 0; i < 20000; i++) {
         char *q = GC_MALLOC(CHUNK);
         memset(q, 0xAA, CHUNK);
     }
 }
 
-static void __attribute__((noinline)) check_after_gc(char *p) {
+static void __attribute__((noinline)) dump(const char *label, const char *p, size_t n) {
+    printf("  %-6s: ", label);
+    for (size_t i = 0; i < n; i++)
+        printf("%02x ", (unsigned char)p[i]);
+    printf("\n");
+}
+
+static void __attribute__((noinline))
+check_after_gc(char *kept, char *lost) {
     GC_gcollect();
     burn_through_heap();
 
-    printf("first bytes at p after GC + reuse: ");
-    for (int i = 0; i < (int)(sizeof(MAGIC) - 1); i++)
-        printf("%02x ", (unsigned char)p[i]);
-    printf("\n");
-    printf("expected (MAGIC):                  ");
-    for (int i = 0; i < (int)(sizeof(MAGIC) - 1); i++)
-        printf("%02x ", (unsigned char)MAGIC[i]);
-    printf("\n");
+    const size_t nk = sizeof(MAGIC_KEPT) - 1;
+    const size_t nl = sizeof(MAGIC_LOST) - 1;
 
-    if (memcmp(p, MAGIC, sizeof(MAGIC) - 1) == 0) {
-        printf("=> OK");
-    } else {
-        printf("=> BUG! object was reclaimed and reused!\n");
-    }
+    printf("kept buffer:\n");
+    dump("got",    kept, nk);
+    dump("want",   MAGIC_KEPT, nk);
+    printf("  => %s\n",
+           memcmp(kept, MAGIC_KEPT, nk) == 0 ? "OK (survived)"
+                                             : "BUG (reclaimed)");
+
+    printf("lost buffer:\n");
+    dump("got",    lost, nl);
+    dump("want",   MAGIC_LOST, nl);
+    printf("  => %s\n",
+           memcmp(lost, MAGIC_LOST, nl) == 0 ? "OK (survived)"
+                                             : "BUG (reclaimed)");
 }
 
 int main(void) {
     GC_INIT();
 
-    char *p = GC_MALLOC(CHUNK);
+    char *kept = GC_MALLOC(CHUNK);
+    GC_KEEP(kept);              /* spill to shadow stack */
 
-    // spill the pointer: by uncommenting this, we force clang to place 'p' onto the
-    // shadowstack, so bdwgc can find it and it works.
-    // printf("&p = %p\n", &p);
+    char *lost = GC_MALLOC(CHUNK);
+    /* no GC_KEEP for lost: it stays only in a wasm local */
 
-    strcpy(p, MAGIC);
+    strcpy(kept, MAGIC_KEPT);
+    strcpy(lost, MAGIC_LOST);
 
-    /*
-     * Deliberately do NOT read p here between the strcpy and the call —
-     * that would give clang reasons to spill p to the shadow stack,
-     * masking the bug.
-     */
-    check_after_gc(p);
+    check_after_gc(kept, lost);
     return 0;
 }
