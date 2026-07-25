@@ -9,7 +9,7 @@ BDWGC_DEFS := -DGC_BUILTIN_ATOMIC -DNO_EXECUTE_PERMISSION
 
 .PHONY: all run run-gc run-lost run-spill clean
 
-all: leak.wasm leak_gc.wasm lost_pointer.wasm spill_test.wasm
+all: leak.wasm gc_noleak.wasm lost_pointer.wasm spill_test.wasm
 
 leak.wasm: leak.c
 	$(CC) $(CFLAGS) $< -o $@
@@ -17,14 +17,14 @@ leak.wasm: leak.c
 libgc.o: $(BDWGC_DIR)/extra/gc.c
 	$(CC) $(CFLAGS) $(BDWGC_INC) $(BDWGC_DEFS) -c $< -o $@
 
-leak_gc.wasm: leak_gc.c libgc.o
-	$(CC) $(CFLAGS) $(BDWGC_INC) leak_gc.c libgc.o -o $@
+gc_noleak.wasm: gc_noleak.c libgc.o
+	$(CC) $(CFLAGS) $(BDWGC_INC) gc_noleak.c libgc.o -o $@
 
 run: leak.wasm
 	$(WASMTIME) leak.wasm
 
-run-gc: leak_gc.wasm
-	$(WASMTIME) leak_gc.wasm
+run-gc: gc_noleak.wasm
+	$(WASMTIME) gc_noleak.wasm
 
 lost_pointer.wasm: lost_pointer.c libgc.o
 	$(CC) $(CFLAGS) $(BDWGC_INC) lost_pointer.c libgc.o -o $@
@@ -39,4 +39,4 @@ run-spill: spill_test.wasm
 	$(WASMTIME) spill_test.wasm
 
 clean:
-	rm -f leak.wasm leak_gc.wasm lost_pointer.wasm spill_test.wasm libgc.o
+	rm -f leak.wasm gc_noleak.wasm lost_pointer.wasm spill_test.wasm libgc.o
