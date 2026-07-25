@@ -17,9 +17,10 @@ BDWGC_DEFS := -DGC_BUILTIN_ATOMIC -DNO_EXECUTE_PERMISSION
 
 .PHONY: all clean \
         wasi-run-leak wasi-run-noleak wasi-run-lost wasi-run-spill \
-        em-run-leak
+        em-run-leak em-run-noleak em-run-lost
 
-all: leak.wasm gc_noleak.wasm lost_pointer.wasm spill_test.wasm leak.em.js
+all: leak.wasm gc_noleak.wasm lost_pointer.wasm spill_test.wasm \
+     leak.em.js gc_noleak.em.js lost_pointer.em.js
 
 # --- wasi builds (run via wasmtime) ---
 
@@ -55,9 +56,25 @@ wasi-run-spill: spill_test.wasm
 leak.em.js: leak.c
 	$(EMCC) $(EMCFLAGS) $< -o $@
 
+libgc.em.o: $(BDWGC_DIR)/extra/gc.c
+	$(EMCC) $(EMCFLAGS) $(BDWGC_INC) $(BDWGC_DEFS) -c $< -o $@
+
+gc_noleak.em.js: gc_noleak.c libgc.em.o
+	$(EMCC) $(EMCFLAGS) $(BDWGC_INC) gc_noleak.c libgc.em.o -o $@
+
+lost_pointer.em.js: lost_pointer.c libgc.em.o
+	$(EMCC) $(EMCFLAGS) $(BDWGC_INC) lost_pointer.c libgc.em.o -o $@
+
 em-run-leak: leak.em.js
 	$(NODE) leak.em.js
 
+em-run-noleak: gc_noleak.em.js
+	$(NODE) gc_noleak.em.js
+
+em-run-lost: lost_pointer.em.js
+	$(NODE) lost_pointer.em.js
+
 clean:
 	rm -f leak.wasm gc_noleak.wasm lost_pointer.wasm spill_test.wasm libgc.o \
-	      leak.em.js leak.em.wasm
+	      leak.em.js leak.em.wasm gc_noleak.em.js gc_noleak.em.wasm \
+	      lost_pointer.em.js lost_pointer.em.wasm libgc.em.o
