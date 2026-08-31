@@ -100,8 +100,6 @@ echo reply: hello from a WASI socket
 - `clean.sh` - remove build artifacts.
 - `config.sh` - shared paths, sourced by the other scripts.
 - `create-bundle.sh` - assembles the minimal C-only sysroot bundle from a wasi-sdk.
-- `zig-wasip1-accept.c` - historical: the only socket-ish thing plain `zig cc`
-  (no external sysroot) can compile, the wasip1 accept-subset.
 
 ---
 
@@ -324,8 +322,9 @@ against the sysroot's `component-type` metadata ever becomes a problem, switchin
 
 zig 0.16 has no `wasm32-wasip2` target ("UnknownOperatingSystem") and bundles no
 wasip2 socket libc. The only socket-ish thing plain `zig cc` can compile is the
-wasip1 accept-subset (`zig-wasip1-accept.c`), which is useless on modern wasmtime
-(the preopened-listener host path is gone). Ruled out by the hard constraints above.
+wasip1 accept-subset (`accept`/`recv`/`send` on a host-provided fd), which is
+useless on modern wasmtime (the preopened-listener host path is gone). Ruled out by
+the hard constraints above.
 
 ## 3. A prebuilt "socket-shims" `.a` (would-have-been experiment 16)
 
