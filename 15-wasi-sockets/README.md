@@ -5,10 +5,10 @@ Goal: write a small C program that uses TCP sockets, compile it to WASI with
 pip-installable toolchain for SPy (a static-Python compiler that emits C and
 compiles it to wasm, and wants sockets on both native and wasi).
 
-This single README contains: the TL;DR + quick start, the background mental model
-(core module vs component, the roles of the tools, wasi-libc), the hard
-constraints that rule out simpler ideas, the **recommended** toolchain, and the
-alternatives we considered and discarded.
+This single README contains: the TL;DR + quick start, the **requirements** that
+drive the design, the background mental model (core module vs component, the roles
+of the tools, wasi-libc), the hard constraints that rule out simpler ideas, the
+**recommended** toolchain, and the alternatives we considered and discarded.
 
 ---
 
@@ -26,6 +26,52 @@ alternatives we considered and discarded.
   wasi-sdk install, no `wasm-component-ld`.
 - SPy should emit **standard BSD socket C**; the same source compiles for native
   (host libc) and wasi (extracted wasip2 libc).
+
+## Requirements (why the tradeoffs are what they are)
+
+Every choice below is a consequence of these goals. They sometimes conflict; the
+recommended toolchain is the best compromise, and the "Alternatives" and "Open
+concern" sections record what each requirement forced us to give up.
+
+1. **Real sockets, on stock `wasmtime`.** TCP client *and* server, run on an
+   unmodified upstream `wasmtime` (no custom host embedding). => forces the
+   wasip2 / component path (only wasip2 has `connect`; wasmtime only satisfies
+   `wasi:sockets/*` for components). This is why a componentization step is
+   unavoidable and why the output is a component, not a plain core module.
+
+2. **Keep the "compiler installs via pip" experience.** SPy already gets its
+   compiler from the `ziglang` PyPI package (~10 MB, `zig cc` + `zig wasm-ld`,
+   native + wasm). Adding wasi support must not require a separate, manual,
+   heavyweight install. => rules out "just depend on the full wasi-sdk" (~200 MB,
+   separate download); favors `wasm-tools` (also on PyPI) over `wasm-component-ld`
+   (per-host binary, not on PyPI) as the componentizer.
+
+3. **Small, ideally host-independent footprint.** What we ship on top of `ziglang`
+   should be a few MB of data, not a second SDK. => ship only the extracted wasip2
+   sysroot (headers + `libc.a` + crt + builtins, ~1.4 MB gzipped, one bundle for
+   all platforms); do not bundle a per-host componentizer if `wasm-tools` (pip) can
+   do the job.
+
+4. **One socket implementation across native and wasi, in standard C.** SPy's
+   emitted code should be portable BSD-socket C that compiles unchanged for native
+   (host libc) and wasi (wasip2 libc) -- no bespoke shim ABI, no per-target socket
+   API in the emitted code. => rules out the "socket-shims `.a`" approach (custom
+   `shim_*` ABI); favors compiling ordinary `<sys/socket.h>` code with the real
+   wasip2 headers.
+
+5. **Extensible to other components later (bonus).** The same mechanism should
+   scale to components with no native equivalent, e.g. **WASI HTTP**. => the build
+   flow (compile C -> link core module -> componentize) must be generic; component-
+   specific glue (via `wit-bindgen`) is added as extra objects, not baked into the
+   toolchain.
+
+6. **Don't silently regress code quality (constraint, not a goal we achieved).**
+   The wasi build should not produce meaningfully worse code than a normal hosted
+   target. This one is **partially violated** by the recommended recipe: the
+   `--target=wasm32-freestanding` workaround (needed to stop zig hijacking headers)
+   disables libc-builtin/idiom recognition. See "Open concern" below -- it is
+   acceptable for the socket demo but must be evaluated before defaulting the whole
+   SPy-to-wasi toolchain to it.
 
 ## Quick start
 
