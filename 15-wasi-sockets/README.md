@@ -319,6 +319,84 @@ components with no libc wrapper, e.g. **WASI HTTP**.
 
 ---
 
+# Open concern: `--target=wasm32-freestanding` disables libc builtins
+
+The recommended recipe compiles with `--target=wasm32-freestanding` (to stop zig
+injecting its own wasip1 headers). This has a **codegen side effect** that matters
+if SPy adopts this as the *default* wasi target for ALL emitted C, not just socket
+code.
+
+## What exactly differs between `wasm32-wasi` and `wasm32-freestanding`
+
+Measured on zig 0.16 (`zig cc -### / -dM -E / -emit-llvm`). Across the axes:
+
+| axis | `wasm32-wasi` | `wasm32-freestanding` | addable back? |
+|------|---------------|-----------------------|---------------|
+| preprocessor defines | `__wasi__=1` set | `__wasi__` unset | yes: `-D__wasi__` |
+| header search | +4 zig wasi-musl `-isystem` dirs | clang builtin only | yes: `-isystem` |
+| link | auto crt1 + libc + `_start` + `main` rename | nothing (`_start` undefined error) | yes: link inputs + `-Dmain=__main_argc_argv` |
+| LLVM `datalayout` / ABI | identical | identical | n/a (same) |
+| **hosted-ness** | `__STDC_HOSTED__=1`, hosted | **`-ffreestanding`, `__STDC_HOSTED__=0`, `no-builtins`** | **NO** |
+| triple OS field | `wasi0.1.0` | `unknown` | no (not a flag) |
+
+The first three rows are exactly what the recipe re-adds. The ABI (`datalayout`,
+struct-return, `long double`, varargs) is byte-identical -- verified by diffing IR.
+
+**The load-bearing difference is hosted-ness.** zig passes `-ffreestanding` to
+clang whenever the OS is `freestanding`, which sets `__STDC_HOSTED__=0` and marks
+functions `no-builtins`. **This cannot be undone by any flag**: clang has
+`-ffreestanding` but no `-fhosted`/`-fno-freestanding`, and `-fbuiltin` / `-O3` do
+not restore it (verified: all still produce 0 idiom recognitions).
+
+## Why the worry is justified (measured impact)
+
+`-ffreestanding` disables the compiler's **libcall / loop-idiom recognition** (the
+optimizer's TargetLibraryInfo is gated on a hosted target). Concrete measurement on
+a small benchmark (`memset`/`memcpy` loops, a hand-rolled `strlen` loop, a
+`printf("...\n")`):
+
+| build | `memset`/`memcpy` loop -> intrinsic | `strlen` loop recognized | `printf` -> `puts` fold |
+|-------|:---:|:---:|:---:|
+| `wasm32-wasi` (hosted, zig)         | yes (2) | yes | yes |
+| **our recipe** (freestanding, zig)  | **no (0)** | **no** | **no** |
+| `wasm32-wasip2` (hosted, wasi-sdk clang) | yes (2) | yes | yes |
+
+So freestanding produces **strictly worse** code than a hosted target would: a
+hand-written zeroing loop stays a scalar loop instead of becoming `memset`; a length
+loop is not turned into `strlen`; `printf` of a constant string is not folded to
+`puts`. For the socket demo this is irrelevant, but as SPy's **default wasi target**
+it would pessimize *all* emitted C -- string handling, buffer clears, struct copies,
+etc. -- everywhere, not just socket code. This is a real, if usually second-order,
+regression, and the concern is valid.
+
+Note the wasi-sdk clang row: targeting real `wasm32-wasip2` (hosted) recovers full
+idiom recognition. The optimization loss is a consequence of the freestanding
+*workaround*, not of wasip2 itself.
+
+## Possible mitigations (to investigate before making it the SPy default)
+
+1. **Post-link idiom recovery is not available**; the recognition happens during
+   codegen, so it must be fixed at compile time.
+2. **Use wasi-sdk's clang for the compile step** (hosted `wasm32-wasip2`) and keep
+   zig only for linking. Recovers builtins, but reintroduces a wasi-sdk binary
+   dependency -- against the "ziglang-only compiler" goal.
+3. **Get zig to expose a hosted wasip2 target.** zig 0.16 has no `wasm32-wasip2` OS
+   at all; if a future zig adds it (hosted, with the right headers), the freestanding
+   trick -- and this whole problem -- disappears. Worth tracking upstream.
+4. **Patch/override TargetLibraryInfo via `-mllvm`** (e.g. force-enable libcalls):
+   not confirmed to work here and fragile; needs investigation.
+5. **Accept it** if benchmarks show the real-world SPy code impact is negligible
+   (the emitted C may already call `memcpy`/`memset` explicitly rather than relying
+   on idiom recognition, in which case the loss is small). Needs a representative
+   SPy benchmark to decide.
+
+Recommendation: before defaulting the SPy-to-wasi toolchain to the freestanding
+recipe, benchmark option 5 on real SPy output and keep an eye on option 3 upstream.
+If the regression is measurable, option 2 (wasi-sdk clang for compile, zig for link)
+is the pragmatic fallback.
+
+---
+
 # Toolchain installed for this experiment (needed network)
 
 - **wasmtime 48.0.1** at `/home/antocuni/wasm/wasmtime-48`, symlinked from
