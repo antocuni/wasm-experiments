@@ -2,7 +2,7 @@
 # Shared configuration for the wasi-sockets build/run scripts.
 # Sourced by make-zig.sh, make-wasi-sdk.sh and run.sh.
 
-# --- wasi-sdk: source of the wasip2 sysroot + wasm-component-ld -------------
+# --- wasi-sdk: source of the wasip2 sysroot --------------------------------
 # For this experiment we point at a full wasi-sdk-34 install directly. A real
 # deployment would ship only the ~14 MB C-only subset produced by create-bundle.sh.
 SDK=/home/antocuni/wasm/wasi-sdk-34
@@ -10,6 +10,12 @@ SYSROOT=$SDK/share/wasi-sysroot
 SYSINC=$SYSROOT/include/wasm32-wasip2
 SYSLIB=$SYSROOT/lib/wasm32-wasip2
 BUILTINS=$SDK/lib/clang/23/lib/wasm32-unknown-wasip2/libclang_rt.builtins.a
+
+# --- componentizer: wasm-tools (the recommended route; published on PyPI) ---
+# make-zig.sh uses this to turn the linked core module into a component.
+WASM_TOOLS=${WASM_TOOLS:-$(command -v wasm-tools || echo "$HOME/.cargo/bin/wasm-tools")}
+# Alternative componentizer (see README, "Alternatives considered"): the wasi-sdk
+# binary, or an upstream prebuilt release. Not used by make-zig.sh.
 COMPONENTLD=$SDK/bin/wasm-component-ld
 
 # --- zig 0.16 from the local venv ------------------------------------------

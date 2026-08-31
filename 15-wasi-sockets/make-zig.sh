@@ -1,8 +1,9 @@
 #!/bin/bash
-# Build server.wasm + client.wasm the "SPy-friendly" way:
-#   - compile with `zig cc`
-#   - link + componentize with wasm-component-ld, driving zig's own `wasm-ld`
-#   - using an external wasip2 sysroot (headers + libc.a + crt + builtins)
+# Build server.wasm + client.wasm the "SPy-friendly" way (the recommended route
+# from README.md): ziglang + wasi-libc + wasm-tools, no wasm-component-ld.
+#   1. compile ORDINARY socket C with `zig cc`  (uses the external wasip2 headers)
+#   2. link to a core module with zig's own `zig wasm-ld` (external wasip2 libc)
+#   3. componentize with `wasm-tools component new`
 #
 # zig does not bundle the wasip2 socket libc, and it force-injects its own
 # outdated wasi-libc headers for any wasm*-wasi* triple. We dodge that by
@@ -18,18 +19,15 @@ source ./config.sh
 ZIG_CC=("$ZIG_BIN" cc --target=wasm32-freestanding -D__wasi__
         -Dmain=__main_argc_argv -nostdinc -isystem "$SYSINC" $CFLAGS)
 
-# Shim so wasm-component-ld (which shells out to an external wasm-ld) uses zig's.
-printf '#!/bin/sh\nexec %s wasm-ld "$@"\n' "$ZIG_BIN" > zig-wasm-ld
-chmod +x zig-wasm-ld
-
 build() {
     local name=$1
-    echo ">>> compiling $name.c with zig cc"
+    echo ">>> [1/3] compiling $name.c with zig cc"
     "${ZIG_CC[@]}" -c -o "$name.o" "$name.c"
-    echo ">>> linking + componentizing $name.wasm (zig wasm-ld)"
-    "$COMPONENTLD" --wasm-ld-path ./zig-wasm-ld \
-        -L"$SYSLIB" "$SYSLIB/crt1-command.o" "$name.o" -lc "$BUILTINS" \
-        -o "$name.wasm"
+    echo ">>> [2/3] linking $name.core.wasm with zig wasm-ld"
+    "$ZIG_BIN" wasm-ld -L"$SYSLIB" "$SYSLIB/crt1-command.o" "$name.o" \
+        -lc "$BUILTINS" -o "$name.core.wasm"
+    echo ">>> [3/3] componentizing $name.wasm with wasm-tools"
+    "$WASM_TOOLS" component new "$name.core.wasm" -o "$name.wasm"
 }
 
 build server

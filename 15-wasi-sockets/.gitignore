@@ -1,2 +1,4 @@
 venv-zig016/
 zig-wasm-ld
+*.o
+*.wasm
